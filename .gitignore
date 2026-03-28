@@ -39,3 +39,13 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# screenshots
+*.png
+!assets/**/*.png
+
+# playwright
+.playwright-mcp/
+
+# images dir (metro workaround)
+/images
