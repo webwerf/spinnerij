@@ -41,3 +41,17 @@ No test runner or linter is configured.
 - `react-native-reanimated` for animations
 - `react-native-web` for web support
 - Typed routes enabled in `app.json`
+
+## Deployment
+
+- **Vercel**: linked project `spinnerij`, deploy via `./dev web` or manual `vercel deploy --prebuilt --prod`
+- **Build**: `npx expo export --platform web` outputs to `dist/`, then copy to `.vercel/output/static/`
+- **GitHub**: `wouterhendriks/spinnerij`
+- SPA routing: Vercel config uses catch-all `{ "src": "/(.*)", "dest": "/index.html" }` for client-side routing
+
+## Project Memory
+
+- Expo Router Stack navigator does NOT animate on web — use `react-native-reanimated` entering animations (SlideInRight) directly on screen components instead
+- iOS Safari bottom bar clips the tab bar — remove fixed `height` from tabBarStyle and use padding only, plus `viewport-fit=cover` in meta tag
+- RSS feed via rss2json API: `item.content` has full HTML, `item.description` is short — use content for detail pages, description (stripped+truncated) for cards
+- Vercel preview deploys are behind SSO on team accounts — use `--prod` for public URLs

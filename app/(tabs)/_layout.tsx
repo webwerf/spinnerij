@@ -12,21 +12,14 @@ export default function TabLayout() {
         tabBarInactiveTintColor: Colors.tabBarInactive,
         tabBarStyle: {
           backgroundColor: Colors.tabBar,
-          borderTopColor: Colors.tabBarBorder,
           borderTopWidth: 0,
-          paddingTop: 10,
-          paddingBottom: 16,
-        },
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: "600",
         },
         headerStyle: {
-          backgroundColor: Colors.surface,
+          backgroundColor: Colors.primary,
         },
         headerTitleStyle: {
           fontWeight: "700",
-          color: Colors.text,
+          color: "#FFFFFF",
           fontSize: 17,
         },
         headerShadowVisible: false,
