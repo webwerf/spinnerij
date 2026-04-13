@@ -47,7 +47,7 @@ No test runner or linter is configured.
 
 - **Vercel**: linked project `spinnerij`, auto-deploys on push to `main` via `vercel.json`
 - **Build**: Vercel runs `npx expo export --platform web` automatically, outputs to `dist/`
-- **GitHub**: `wouterhendriks/spinnerij`
+- **GitHub**: `webwerf/spinnerij`
 - SPA routing: `vercel.json` catch-all routes all paths to `/index.html`
 
 ## Project Memory
@@ -61,3 +61,4 @@ No test runner or linter is configured.
 - Avoid emoji icons in headers/nav — use SVG icons via `react-native-svg` for a professional look
 - WhatsApp links use placeholder number `31534500000` — needs to be replaced with Inge's real number
 - Huurder/room/vraag-aanbod data is hardcoded in `constants/` — planned to move to WebHare backend later
+- App lives inside a WebHare module at `installedmodules/spinnerij/app/` — root has WebHare module files (moduledefinition.xml, language/), app has Expo files
