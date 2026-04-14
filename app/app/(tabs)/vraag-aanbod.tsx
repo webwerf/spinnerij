@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { ScrollView, View, Text, TextInput, StyleSheet, Pressable, Linking, RefreshControl, Modal, Platform, Alert, KeyboardAvoidingView } from "react-native";
+import { ScrollView, View, Text, TextInput, StyleSheet, Pressable, Linking, RefreshControl, Modal, Platform, Alert } from "react-native";
 import { Colors } from "@/constants/Colors";
 import { useSpinnerijData } from "@/hooks/useSpinnerijData";
 import type { SupplyDemandItem } from "@/constants/types";
@@ -196,47 +196,46 @@ export default function VraagAanbodScreen() {
       </ScrollView>
 
       <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={handleCloseModal}>
-        <Pressable style={styles.modalOverlay} onPress={handleCloseModal}>
-          <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
-            <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Nieuw bericht plaatsen</Text>
-                <Pressable style={styles.modalClose} onPress={handleCloseModal}>
-                  <Text style={styles.modalCloseText}>✕</Text>
-                </Pressable>
-              </View>
-
-              <ScrollView style={styles.modalBody} keyboardShouldPersistTaps="handled">
-                <Text style={styles.modalLabel}>Type</Text>
-                <Dropdown
-                  value={formType}
-                  placeholder="Kies type"
-                  options={TYPE_OPTIONS}
-                  onChange={setFormType}
-                />
-
-                <Text style={styles.modalLabel}>Omschrijving</Text>
-                <TextInput
-                  style={styles.modalTextarea}
-                  placeholder="Beschrijf je vraag of aanbod..."
-                  placeholderTextColor={Colors.textLight}
-                  value={formDescription}
-                  onChangeText={setFormDescription}
-                  multiline
-                  numberOfLines={6}
-                  textAlignVertical="top"
-                />
-              </ScrollView>
-
-              <Pressable
-                style={({ pressed }) => [styles.modalSubmitButton, pressed && styles.modalSubmitButtonPressed]}
-                onPress={handleSubmit}
-              >
-                <Text style={styles.modalSubmitButtonText}>Versturen via WhatsApp 🚀</Text>
+        <View style={styles.modalOverlay}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={handleCloseModal} />
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Nieuw bericht plaatsen</Text>
+              <Pressable style={styles.modalClose} onPress={handleCloseModal}>
+                <Text style={styles.modalCloseText}>✕</Text>
               </Pressable>
             </View>
-          </KeyboardAvoidingView>
-        </Pressable>
+
+            <View style={styles.modalBody}>
+              <Text style={styles.modalLabel}>Type</Text>
+              <Dropdown
+                value={formType}
+                placeholder="Kies type"
+                options={TYPE_OPTIONS}
+                onChange={setFormType}
+              />
+
+              <Text style={styles.modalLabel}>Omschrijving</Text>
+              <TextInput
+                style={styles.modalTextarea}
+                placeholder="Beschrijf je vraag of aanbod..."
+                placeholderTextColor={Colors.textLight}
+                value={formDescription}
+                onChangeText={setFormDescription}
+                multiline
+                numberOfLines={6}
+                textAlignVertical="top"
+              />
+            </View>
+
+            <Pressable
+              style={({ pressed }) => [styles.modalSubmitButton, pressed && styles.modalSubmitButtonPressed]}
+              onPress={handleSubmit}
+            >
+              <Text style={styles.modalSubmitButtonText}>Versturen via WhatsApp 🚀</Text>
+            </Pressable>
+          </View>
+        </View>
       </Modal>
     </View>
   );
@@ -448,7 +447,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    backgroundColor: "rgba(0,0,0,0.6)",
     justifyContent: "center",
     padding: 20,
   },
@@ -461,10 +460,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 20,
     elevation: 8,
-    maxHeight: "80%",
   },
   modalBody: {
-    flexShrink: 1,
   },
   modalHeader: {
     flexDirection: "row",

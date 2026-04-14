@@ -65,3 +65,5 @@ No test runner or linter is configured.
 - App lives inside a WebHare module at `installedmodules/spinnerij/app/` — root has WebHare module files (moduledefinition.xml, language/), app has Expo files
 - Build uses pre-converted fonts from `scripts/fonts/` — run `scripts/rebuild-fonts.sh` to regenerate after adding/updating font packages
 - Production API URL is `https://sites.webwerf.nl/spinnerij-app` — fallback in `constants/api.ts`, use `--local` flag in build script for localhost
+- `react-native-modal` package is incompatible with React 19 / Expo SDK 55 — uses deprecated `TouchableWithoutFeedback` and old ref API. Don't use it.
+- Modal backdrop dismiss on web: use `Pressable` + `StyleSheet.absoluteFill` as a *sibling* of modal content, not as a parent wrapper. Parent wrapper causes form element clicks to close the modal.
