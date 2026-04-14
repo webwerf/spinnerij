@@ -4,8 +4,8 @@
 # Use './dev webhare' to run this script.
 #
 # WebHare lowercases URLs on production servers. Linux is case-sensitive,
-# so filenames must be lowercase. Also converts .ttf fonts to .woff2
-# (WebHare doesn't serve .ttf files on some servers).
+# so filenames must be lowercase. Pre-converted woff2 fonts live in
+# scripts/fonts/ — run scripts/rebuild-fonts.sh to regenerate them.
 #
 # Usage:
 #   ./scripts/build-webhare.sh                # Production build (relative API URL)
@@ -78,86 +78,35 @@ node -e "
   fs.writeFileSync('$DIST_DIR/index.html', html);
 "
 
-# Step 3: Relocate font files (avoid @-prefixed paths that WebHare can't serve)
-echo "Relocating font files..."
+# Step 3: Copy pre-built fonts and fix JS bundle references
+# Fonts are pre-converted (woff2, lowercased) in scripts/fonts/.
+# To regenerate after adding/updating font packages, run: ./scripts/rebuild-fonts.sh
+echo "Copying pre-built fonts..."
 
 FONT_DST="$DIST_DIR/assets/fonts"
 mkdir -p "$FONT_DST"
-
-# Collect fonts from @expo-google-fonts
-GOOGLE_FONTS_SRC="$DIST_DIR/assets/node_modules/@expo-google-fonts"
-if [ -d "$GOOGLE_FONTS_SRC" ]; then
-  find "$GOOGLE_FONTS_SRC" -name "*.ttf" -exec cp {} "$FONT_DST/" \;
-
-  # Update references in JS bundle
-  for js in "$DIST_DIR"/_expo/static/js/web/entry-*.js; do
-    [ -f "$js" ] || continue
-    # Replace all @expo-google-fonts paths with flat assets/fonts/
-    perl -pi -e 's|assets/node_modules/\@expo-google-fonts/[^/]+/[^/]+/([^"]+\.ttf)|assets/fonts/$1|g' "$js"
-  done
-fi
-
-# Collect fonts from @react-navigation (icons/images)
-NAV_SRC="$DIST_DIR/assets/node_modules/@react-navigation"
-if [ -d "$NAV_SRC" ]; then
-  find "$NAV_SRC" \( -name "*.ttf" -o -name "*.png" \) -exec cp {} "$FONT_DST/" \;
-
-  for js in "$DIST_DIR"/_expo/static/js/web/entry-*.js; do
-    [ -f "$js" ] || continue
-    perl -pi -e 's|assets/node_modules/\@react-navigation/elements/lib/module/assets/([^"]+)|assets/fonts/$1|g' "$js"
-  done
-fi
-
-# Collect assets from expo-router
-ROUTER_SRC="$DIST_DIR/assets/node_modules/expo-router/assets"
-if [ -d "$ROUTER_SRC" ]; then
-  cp "$ROUTER_SRC"/* "$FONT_DST/" 2>/dev/null || true
-
-  for js in "$DIST_DIR"/_expo/static/js/web/entry-*.js; do
-    [ -f "$js" ] || continue
-    perl -pi -e 's|assets/node_modules/expo-router/assets/([^"]+)|assets/fonts/$1|g' "$js"
-  done
-fi
+cp "$SCRIPT_DIR/fonts/"* "$FONT_DST/"
 
 # Remove the node_modules directory from dist (no longer needed)
 rm -rf "$DIST_DIR/assets/node_modules"
 
-# Step 4: Convert .ttf to .woff2
-echo "Converting fonts to woff2..."
-for f in "$FONT_DST"/*.ttf; do
-  [ -f "$f" ] || continue
-  fonttools ttLib.woff2 compress "$f" 2>/dev/null || true
-done
-
-# Update .ttf references to .woff2 in JS bundle
+# Fix JS bundle references: deep node_modules paths → flat assets/fonts/
 for js in "$DIST_DIR"/_expo/static/js/web/entry-*.js; do
   [ -f "$js" ] || continue
+  # @expo-google-fonts paths
+  perl -pi -e 's|assets/node_modules/\@expo-google-fonts/[^/]+/[^/]+/([^"]+\.ttf)|assets/fonts/$1|g' "$js"
+  # @react-navigation paths
+  perl -pi -e 's|assets/node_modules/\@react-navigation/elements/lib/module/assets/([^"]+)|assets/fonts/$1|g' "$js"
+  # expo-router paths
+  perl -pi -e 's|assets/node_modules/expo-router/assets/([^"]+)|assets/fonts/$1|g' "$js"
+  # .ttf → .woff2
   sed -i '' 's/\.ttf/.woff2/g' "$js"
-done
-
-# Remove original .ttf files (woff2 replacements exist)
-rm -f "$FONT_DST"/*.ttf
-
-# Step 5: Lowercase all filenames in assets/fonts/ (WebHare lowercases URLs)
-echo "Lowercasing font filenames..."
-for f in "$FONT_DST"/*; do
-  [ -f "$f" ] || continue
-  dir=$(dirname "$f")
-  base=$(basename "$f")
-  lower=$(echo "$base" | tr '[:upper:]' '[:lower:]')
-  if [ "$base" != "$lower" ]; then
-    mv "$f" "$dir/$lower"
-  fi
-done
-
-# Lowercase font references in JS bundle
-for js in "$DIST_DIR"/_expo/static/js/web/entry-*.js; do
-  [ -f "$js" ] || continue
+  # Lowercase references
   perl -pi -e 's|assets/fonts/([^"]+?)\.woff2|"assets/fonts/" . lc($1) . ".woff2"|ge' "$js"
   perl -pi -e 's|assets/fonts/([^"]+?)\.png|"assets/fonts/" . lc($1) . ".png"|ge' "$js"
 done
 
-# Step 6: Copy to WebHare module
+# Step 4: Copy to WebHare module
 echo "Copying to WebHare module (web/dist/)..."
 rm -rf "$WEB_DIR"
 mkdir -p "$WEB_DIR"
