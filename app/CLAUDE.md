@@ -45,17 +45,16 @@ No test runner or linter is configured.
 
 ## Deployment
 
-- **Vercel**: linked project `spinnerij`, auto-deploys on push to `main` via `vercel.json`
-- **Build**: Vercel runs `npx expo export --platform web` automatically, outputs to `dist/`
+- **WebHare**: `./dev webhare` builds Expo web and copies to `web/dist/` in the module root, then deploy with `wh devkit:push`
+- **Build**: `scripts/build-webhare.sh` handles font relocation, .ttf→.woff2 conversion, and filename lowercasing for WebHare compatibility
+- **Hosting**: Webruleset `spinnerij-app` in `moduledefinition.xml` serves the SPA via `handlebydir` + `handlebyscript` fallbacks
 - **GitHub**: `webwerf/spinnerij`
-- SPA routing: `vercel.json` catch-all routes all paths to `/index.html`
 
 ## Project Memory
 
 - Expo Router Stack navigator does NOT animate on web — use `react-native-reanimated` entering animations (SlideInRight) directly on screen components instead
 - iOS Safari bottom bar clips the tab bar — remove fixed `height` from tabBarStyle and use padding only, plus `viewport-fit=cover` in meta tag
 - RSS feed via rss2json API: `item.content` has full HTML, `item.description` is short — use content for detail pages, description (stripped+truncated) for cards
-- Vercel preview deploys are behind SSO on team accounts — use `--prod` for public URLs
 - `@react-native-picker/picker` renders as an ugly unstyled `<select>` on web — use a custom `Dropdown` component instead (see `components/Dropdown.tsx`)
 - Dropdowns in React Native Web need explicit `zIndex` on the parent container, otherwise they render behind sibling elements
 - Avoid emoji icons in headers/nav — use SVG icons via `react-native-svg` for a professional look

@@ -4,6 +4,7 @@
 /tsconfig.json
 .playwright-mcp/
 app/.playwright-mcp/
+web/dist/
 
 # macOS
 .DS_Store

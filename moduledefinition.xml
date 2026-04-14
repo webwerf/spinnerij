@@ -5,8 +5,15 @@
     <description />
     <packaging download="true" webhareversion=">= 5.3.0">
       <excludepath mask="*localtests*" />
+      <excludepath mask="app/node_modules*" />
+      <excludepath mask="app/.expo*" />
+      <excludepath mask="app/dist*" />
+      <excludepath mask="app/.vercel*" />
+      <excludepath mask="app/.playwright-mcp*" />
     </packaging>
-    <validation options="nowarnings" />
+    <validation options="nowarnings">
+      <exclude mask="web/*" permanent="true" why="Built Expo PWA (non-WebHare)" />
+    </validation>
   </meta>
 
   <wrdschemas>
@@ -20,6 +27,21 @@
       </accesscheck>
     </application>
   </portal>
+
+  <backend>
+    <webruleset name="spinnerij-app" title="Spinnerij App (PWA)">
+      <!-- Static assets (JS, CSS, images, fonts) -->
+      <webrule path="/" match="initial" handlebydir="/web/dist/" />
+
+      <!-- SPA fallback: serve index.html for app routes -->
+      <webrule path="/home" match="initial" handlebyscript="/web/dist/index.html" />
+      <webrule path="/huurders" match="initial" handlebyscript="/web/dist/index.html" />
+      <webrule path="/vraag-aanbod" match="initial" handlebyscript="/web/dist/index.html" />
+      <webrule path="/reserveren" match="initial" handlebyscript="/web/dist/index.html" />
+      <webrule path="/melding" match="initial" handlebyscript="/web/dist/index.html" />
+      <webrule path="/contact" match="initial" handlebyscript="/web/dist/index.html" />
+    </webruleset>
+  </backend>
 
   <publisher>
     <webdesign name="spinnerij" title="spinnerij" siteprofile="webdesigns/spinnerij/spinnerij.siteprl.xml">

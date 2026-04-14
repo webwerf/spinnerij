@@ -49,4 +49,3 @@ yarn-error.*
 
 # images dir (metro workaround)
 /images
-.vercel

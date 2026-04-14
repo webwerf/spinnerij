@@ -4,17 +4,19 @@
 #
 # Usage:
 #   ./dev                   Interactive menu
-#   ./dev web               Web deployen (Vercel)
 #   ./dev start             Dev server starten
-#   ./dev deploy            Alias voor ./dev web
+#   ./dev webhare            Web deployen (WebHare)
 #
 # Tab completion: add to ~/.bash_profile:
-#   eval "$(~/projects/apps/spinnerij/dev --completions)"
+#   eval "$(~/whrunkit/myserver/whdata/installedmodules/spinnerij/app/dev --completions)"
 
 if [ "$1" = "--completions" ]; then
-  echo 'complete -W "start web deploy --help" ./dev'
+  echo 'complete -W "start webhare wh --help" ./dev'
   exit 0
 fi
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+MODULE_DIR="$(dirname "$SCRIPT_DIR")"
 
 show_help() {
   echo ""
@@ -22,7 +24,10 @@ show_help() {
   echo ""
   echo "Commands:"
   echo "  start                Dev server starten (web)"
-  echo "  web / deploy         Web deployen naar Vercel"
+  echo "  webhare (wh)         Web deployen naar WebHare"
+  echo ""
+  echo "Flags:"
+  echo "  webhare              --local (lokale API)"
   echo ""
   echo "Without command: interactive menu"
 }
@@ -39,91 +44,58 @@ do_start() {
 }
 
 # ──────────────────────────────────────────────
-# web — Web deployen (Vercel)
+# webhare — Web deployen (WebHare)
 # ──────────────────────────────────────────────
-do_web() {
-  local TARGET=""
+do_webhare() {
+  local BUILD_FLAG=""
+  local SERVER="https://cms.webwerf.nl/"
+  local DEPLOY=true
 
   for arg in "$@"; do
     case $arg in
-      --preview)    TARGET="preview" ;;
-      --production) TARGET="production" ;;
+      --local) BUILD_FLAG="--local" ;;
     esac
   done
 
-  if [ -z "$TARGET" ]; then
+  if [ -z "$BUILD_FLAG" ]; then
     echo ""
     echo "Waar wil je naartoe deployen?"
-    echo "  1) Production (default)"
-    echo "  2) Preview"
+    echo "  1) Productie — cms.webwerf.nl (default)"
+    echo "  2) Lokaal — eigen WebHare server"
     read -p "Kies [1-2]: " -n 1 -r
     echo
     case $REPLY in
-      2) TARGET="preview" ;;
-      *) TARGET="production" ;;
+      2) BUILD_FLAG="--local"; DEPLOY=false ;;
+      *) ;;
     esac
   fi
 
-  # Check for uncommitted changes
-  if [ -n "$(git status --porcelain)" ]; then
+  # Check for uncommitted changes in the module
+  local DIRTY=""
+  if [ -n "$(git -C "$MODULE_DIR" status --porcelain)" ]; then
+    DIRTY="uncommitted"
+  fi
+  if [ -n "$(git -C "$MODULE_DIR" log --oneline "@{u}..HEAD" 2>/dev/null)" ]; then
+    [ -n "$DIRTY" ] && DIRTY="$DIRTY + unpushed" || DIRTY="unpushed"
+  fi
+  if [ -n "$DIRTY" ]; then
     echo ""
-    echo "⚠️  Er zijn uncommitted changes."
-    git status --short
+    echo "⚠️  spinnerij module heeft $DIRTY changes."
+    git -C "$MODULE_DIR" status --short
     echo ""
-    read -p "Eerst committen? [Y/n] " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Nn]$ ]]; then
-      git add -A
-      read -p "Commit message: " -r MSG
-      git commit -m "${MSG:-deploy}"
-      git push
-    fi
-  else
-    # Push any unpushed commits
-    if [ -n "$(git log --oneline "@{u}..HEAD" 2>/dev/null)" ]; then
-      echo ""
-      echo "Unpushed commits gevonden, pushing..."
-      git push
-    fi
   fi
 
   echo ""
-  echo "Building web bundle..."
-  npx expo export --platform web --clear || return 1
+  echo "Building..."
+  "$MODULE_DIR/scripts/build-webhare.sh" $BUILD_FLAG || return 1
 
-  echo ""
-  echo "Preparing Vercel output..."
-  rm -rf .vercel/output
-  mkdir -p .vercel/output/static
-  cp -R dist/. .vercel/output/static/
-
-  cat > .vercel/output/config.json << 'CONF'
-{
-  "version": 3,
-  "routes": [
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/index.html" }
-  ]
-}
-CONF
-
-  if [ "$TARGET" = "preview" ]; then
-    echo "Deploying preview to Vercel..."
-    vercel deploy --prebuilt --yes
-  else
+  if [ "$DEPLOY" = true ]; then
     echo ""
-    echo "⚠️  Deploying to PRODUCTION."
-    read -p "Weet je het zeker? [y/N] " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-      echo "Afgebroken."
-      return 0
-    fi
-    vercel deploy --prebuilt --yes --prod
+    echo "Deploying naar $SERVER..."
+    echo "  → wh devkit:push $SERVER spinnerij"
+    echo ""
+    wh devkit:push "$SERVER" spinnerij
   fi
-
-  echo ""
-  echo "✅ Deploy klaar!"
 }
 
 # ──────────────────────────────────────────────
@@ -134,14 +106,14 @@ interactive_menu() {
   echo "Wat wil je doen?"
   echo ""
   echo "  1) Dev server starten"
-  echo "  2) Web deployen (Vercel)"
+  echo "  2) Web deployen (WebHare)"
   echo ""
   read -p "Kies [1-2]: " -n 1 -r
   echo
 
   case $REPLY in
     1) do_start ;;
-    2) do_web ;;
+    2) do_webhare ;;
     *) echo "Ongeldige keuze."; exit 1 ;;
   esac
 }
@@ -151,7 +123,7 @@ interactive_menu() {
 # ──────────────────────────────────────────────
 case "${1:-}" in
   start)          shift; do_start "$@" ;;
-  web|deploy)     shift; do_web "$@" ;;
+  webhare|wh)     shift; do_webhare "$@" ;;
   --help|-h)      show_help ;;
   --completions)  exit 0 ;;
   "")             interactive_menu ;;
