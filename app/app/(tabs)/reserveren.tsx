@@ -2,14 +2,14 @@ import { ScrollView, View, Text, StyleSheet, Pressable, Linking, RefreshControl 
 import { Colors } from "@/constants/Colors";
 import { useSpinnerijData } from "@/hooks/useSpinnerijData";
 
-const WHATSAPP_BASE = "https://wa.me/31534500000?text=";
+import { WHATSAPP_BASE } from "@/constants/api";
 
 export default function ReserverenScreen() {
   const { data, loading, error, refresh } = useSpinnerijData();
   const rooms = data?.rooms ?? [];
 
   function handleReserve(roomName: string) {
-    const message = encodeURIComponent(`Hoi Inge, ik wil graag ${roomName} reserveren.`);
+    const message = encodeURIComponent(`Hoi Inge,\n\nIk wil graag ${roomName} reserveren.\n\nDatum: `);
     Linking.openURL(`${WHATSAPP_BASE}${message}`);
   }
 
