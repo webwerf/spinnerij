@@ -12,29 +12,19 @@ LOADLIB "mod::wrd/lib/api.whlib";
 wh runtest spinnerij.tollium
 */
 
+STRING test_schema_tag := "webhare_testsuite:spinnerij_tollium";
+
 OBJECT wrdschema;
 
 MACRO Setup()
 {
-  wrdschema := OpenWRDSchema("spinnerij:spinnerij");
-}
-
-MACRO CleanAllEntities()
-{
+  // Create/reset isolated test schema so production data is untouched
   testfw->BeginWork();
-  // Delete in dependency order: referencing types first
-  STRING ARRAY types := ["reservation", "report", "supply_demand", "tenant", "room"];
-  FOREVERY (STRING typename FROM types)
-  {
-    OBJECT wrdtype := wrdschema->GetType(typename);
-    RECORD ARRAY items := wrdtype->RunQuery(
-      [ outputcolumns := [ "WRD_ID" ]
-      , filters := [ [ field := "WRD_TAG", matchtype := "LIKE", value := "*" ] ]
-      , historymode := "all"
-      ]);
-    IF (Length(items) > 0)
-      wrdtype->DeleteEntities(SELECT AS INTEGER ARRAY wrd_id FROM items);
-  }
+  OBJECT existing := OpenWRDSchema(test_schema_tag);
+  IF (ObjectExists(existing))
+    existing->DeleteSelf();
+  wrdschema := CreateWRDSchema(test_schema_tag);
+  wrdschema->ApplySchemaDefinition([ schemaresource := "mod::spinnerij/data/wrdschema.xml" ]);
   testfw->CommitWork();
 }
 
@@ -42,8 +32,7 @@ MACRO CleanAllEntities()
 
 ASYNC MACRO TestCreateTenantViaUI()
 {
-  CleanAllEntities();
-  AWAIT ExpectScreenChange(+1, PTR TTLaunchApp("spinnerij:main"));
+  AWAIT ExpectScreenChange(+1, PTR TTLaunchApp("spinnerij:main", CELL[ params := ["isunittest"] ]));
 
   // First tab (Huurders) is selected by default
   TestEQ(0, Length(TT("tenants")->rows), "Should start with 0 tenants");
@@ -67,8 +56,6 @@ ASYNC MACRO TestCreateTenantViaUI()
 
 ASYNC MACRO TestEditTenantViaUI()
 {
-  CleanAllEntities();
-
   // Create tenant via backend
   testfw->BeginWork();
   OBJECT tenantent := wrdschema->GetType("tenant")->EnsureEntity([ wrd_title := "Originele Naam"
@@ -78,7 +65,7 @@ ASYNC MACRO TestEditTenantViaUI()
   INTEGER tenantid := tenantent->id;
   testfw->CommitWork();
 
-  AWAIT ExpectScreenChange(+1, PTR TTLaunchApp("spinnerij:main"));
+  AWAIT ExpectScreenChange(+1, PTR TTLaunchApp("spinnerij:main", CELL[ params := ["isunittest"] ]));
 
   // Select and edit
   TT("tenants")->value := [tenantid];
@@ -107,14 +94,12 @@ ASYNC MACRO TestEditTenantViaUI()
 
 ASYNC MACRO TestDeleteTenantViaUI()
 {
-  CleanAllEntities();
-
   // Create tenant via backend
   testfw->BeginWork();
   INTEGER tenantid := wrdschema->GetType("tenant")->EnsureEntity([ wrd_title := "Te Verwijderen" ], [ entitykey := ["WRD_TITLE"] ])->id;
   testfw->CommitWork();
 
-  AWAIT ExpectScreenChange(+1, PTR TTLaunchApp("spinnerij:main"));
+  AWAIT ExpectScreenChange(+1, PTR TTLaunchApp("spinnerij:main", CELL[ params := ["isunittest"] ]));
 
   TestEQ(1, Length(TT("tenants")->rows), "Should have 1 tenant");
 
@@ -131,8 +116,7 @@ ASYNC MACRO TestDeleteTenantViaUI()
 
 ASYNC MACRO TestSettingsCreateRoom()
 {
-  CleanAllEntities();
-  AWAIT ExpectScreenChange(+1, PTR TTLaunchApp("spinnerij:main"));
+  AWAIT ExpectScreenChange(+1, PTR TTLaunchApp("spinnerij:main", CELL[ params := ["isunittest"] ]));
 
   // Open Settings screen
   AWAIT ExpectScreenChange(+1, PTR TTClick("settings"));
@@ -160,8 +144,6 @@ ASYNC MACRO TestSettingsCreateRoom()
 
 ASYNC MACRO TestSettingsEditRoom()
 {
-  CleanAllEntities();
-
   // Create room via backend
   testfw->BeginWork();
   INTEGER roomid := wrdschema->GetType("room")->EnsureEntity([ wrd_title := "Oude Zaal"
@@ -170,7 +152,7 @@ ASYNC MACRO TestSettingsEditRoom()
                                                               ], [ entitykey := ["WRD_TITLE"] ])->id;
   testfw->CommitWork();
 
-  AWAIT ExpectScreenChange(+1, PTR TTLaunchApp("spinnerij:main"));
+  AWAIT ExpectScreenChange(+1, PTR TTLaunchApp("spinnerij:main", CELL[ params := ["isunittest"] ]));
   AWAIT ExpectScreenChange(+1, PTR TTClick("settings"));
 
   TestEQ(1, Length(TT("rooms")->rows), "Should have 1 room");
@@ -203,8 +185,7 @@ ASYNC MACRO TestSettingsEditRoom()
 
 ASYNC MACRO TestCreateReportViaUI()
 {
-  CleanAllEntities();
-  AWAIT ExpectScreenChange(+1, PTR TTLaunchApp("spinnerij:main"));
+  AWAIT ExpectScreenChange(+1, PTR TTLaunchApp("spinnerij:main", CELL[ params := ["isunittest"] ]));
 
   // Open add report screen (reports is on the Meldingen tab)
   AWAIT ExpectScreenChange(+1, PTR TT("reports->entities")->addbutton->tolliumclick());
@@ -226,14 +207,12 @@ ASYNC MACRO TestCreateReportViaUI()
 
 ASYNC MACRO TestCreateReservationViaUI()
 {
-  CleanAllEntities();
-
   // Create a room first (required foreign key)
   testfw->BeginWork();
   INTEGER roomid := wrdschema->GetType("room")->EnsureEntity([ wrd_title := "Vergaderzaal" ], [ entitykey := ["WRD_TITLE"] ])->id;
   testfw->CommitWork();
 
-  AWAIT ExpectScreenChange(+1, PTR TTLaunchApp("spinnerij:main"));
+  AWAIT ExpectScreenChange(+1, PTR TTLaunchApp("spinnerij:main", CELL[ params := ["isunittest"] ]));
 
   // Open add reservation screen
   AWAIT ExpectScreenChange(+1, PTR TT("reservations->entities")->addbutton->tolliumclick());
@@ -254,11 +233,17 @@ ASYNC MACRO TestCreateReservationViaUI()
 
 RunTestFramework([ PTR Setup
                  , PTR TestCreateTenantViaUI
+                 , PTR Setup
                  , PTR TestEditTenantViaUI
+                 , PTR Setup
                  , PTR TestDeleteTenantViaUI
+                 , PTR Setup
                  , PTR TestSettingsCreateRoom
+                 , PTR Setup
                  , PTR TestSettingsEditRoom
+                 , PTR Setup
                  , PTR TestCreateReportViaUI
+                 , PTR Setup
                  , PTR TestCreateReservationViaUI
                  ]
                  , [ testusers := [ [ login := "admin", grantrights := [ "system:sysop" ] ] ] ]

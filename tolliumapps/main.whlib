@@ -1,38 +1,33 @@
 <?wh
 
 LOADLIB "mod::publisher/lib/control.whlib";
+
 LOADLIB "mod::system/lib/database.whlib";
 LOADLIB "mod::system/lib/whfs.whlib";
+
 LOADLIB "mod::tollium/lib/screenbase.whlib";
+LOADLIB "mod::tollium/lib/internal/support.whlib";
+
 LOADLIB "mod::wrd/lib/screenbase.whlib";
 LOADLIB "mod::wrd/lib/api.whlib";
 
-/** Republish all data.json files of the Spinnerij filetype */
-MACRO RepublishDataJson()
-{
-  INTEGER datatype := OpenWHFSType("http://spinnerijoosterveld.nl/filetype/data")->id;
-  FOREVERY (INTEGER fileid FROM SELECT AS INTEGER ARRAY id FROM system.fs_objects WHERE type = datatype AND publish)
-    ScheduleFileRepublish(fileid);
-}
 
-/** Close entities and republish data.json */
-MACRO CloseEntitiesAndRepublish(OBJECT screen, OBJECT wrdtype, INTEGER ARRAY ids)
-{
-  IF (screen->RunSimpleScreen("question", "Weet je zeker dat je dit wilt verwijderen?") != "yes")
-    RETURN;
-
-  OBJECT work := screen->BeginUnvalidatedWork();
-  FOREVERY (INTEGER id FROM ids)
-    wrdtype->GetEntity(id)->CloseEntity();
-  RepublishDataJson();
-  work->Finish();
-}
+BOOLEAN g_isunittest;
 
 PUBLIC STATIC OBJECTTYPE Main EXTEND TolliumScreenBase
 <
   MACRO NEW()
   {
-    this->contexts->wrdschema := OpenWRDSchema("spinnerij:spinnerij");
+    RECORD initdata := __screenbuildinfo.initdata;
+    IF (RecordExists(initdata) AND CellExists(initdata, "params") AND "isunittest" IN initdata.params)
+    {
+      g_isunittest := TRUE;
+      this->contexts->wrdschema := OpenWRDSchema("webhare_testsuite:spinnerij_tollium");
+    }
+    ELSE
+    {
+      this->contexts->wrdschema := OpenWRDSchema("spinnerij:spinnerij");
+    }
   }
 
   MACRO OnDeleteEntities(OBJECT wrdtype, INTEGER ARRAY ids)
@@ -53,11 +48,6 @@ PUBLIC STATIC OBJECTTYPE Main EXTEND TolliumScreenBase
 
 PUBLIC STATIC OBJECTTYPE Settings EXTEND TolliumScreenBase
 <
-  MACRO NEW()
-  {
-    this->contexts->wrdschema := OpenWRDSchema("spinnerij:spinnerij");
-  }
-
   MACRO OnDeleteEntities(OBJECT wrdtype, INTEGER ARRAY ids)
   {
     CloseEntitiesAndRepublish(this, wrdtype, ids);
@@ -75,11 +65,6 @@ PUBLIC STATIC OBJECTTYPE Settings EXTEND TolliumScreenBase
 
 PUBLIC STATIC OBJECTTYPE EditTenant EXTEND WRDEntityEditScreenBase
 <
-  MACRO NEW()
-  {
-    this->contexts->wrdschema := OpenWRDSchema("spinnerij:spinnerij");
-  }
-
   UPDATE MACRO AfterStore(OBJECT work)
   {
     RepublishDataJson();
@@ -88,11 +73,6 @@ PUBLIC STATIC OBJECTTYPE EditTenant EXTEND WRDEntityEditScreenBase
 
 PUBLIC STATIC OBJECTTYPE EditRoom EXTEND WRDEntityEditScreenBase
 <
-  MACRO NEW()
-  {
-    this->contexts->wrdschema := OpenWRDSchema("spinnerij:spinnerij");
-  }
-
   UPDATE MACRO AfterStore(OBJECT work)
   {
     RepublishDataJson();
@@ -101,11 +81,6 @@ PUBLIC STATIC OBJECTTYPE EditRoom EXTEND WRDEntityEditScreenBase
 
 PUBLIC STATIC OBJECTTYPE EditSupplyDemand EXTEND WRDEntityEditScreenBase
 <
-  MACRO NEW()
-  {
-    this->contexts->wrdschema := OpenWRDSchema("spinnerij:spinnerij");
-  }
-
   UPDATE MACRO AfterStore(OBJECT work)
   {
     RepublishDataJson();
@@ -114,11 +89,6 @@ PUBLIC STATIC OBJECTTYPE EditSupplyDemand EXTEND WRDEntityEditScreenBase
 
 PUBLIC STATIC OBJECTTYPE EditReport EXTEND WRDEntityEditScreenBase
 <
-  MACRO NEW()
-  {
-    this->contexts->wrdschema := OpenWRDSchema("spinnerij:spinnerij");
-  }
-
   UPDATE MACRO AfterStore(OBJECT work)
   {
     RepublishDataJson();
@@ -127,13 +97,32 @@ PUBLIC STATIC OBJECTTYPE EditReport EXTEND WRDEntityEditScreenBase
 
 PUBLIC STATIC OBJECTTYPE EditReservation EXTEND WRDEntityEditScreenBase
 <
-  MACRO NEW()
-  {
-    this->contexts->wrdschema := OpenWRDSchema("spinnerij:spinnerij");
-  }
-
   UPDATE MACRO AfterStore(OBJECT work)
   {
     RepublishDataJson();
   }
 >;
+
+/** Republish all data.json files of the Spinnerij filetype */
+MACRO RepublishDataJson()
+{
+  IF (g_isunittest)
+    RETURN;
+
+  INTEGER datatype := OpenWHFSType("http://spinnerijoosterveld.nl/filetype/data")->id;
+  FOREVERY (INTEGER fileid FROM SELECT AS INTEGER ARRAY id FROM system.fs_objects WHERE type = datatype AND publish)
+    ScheduleFileRepublish(fileid);
+}
+
+/** Close entities and republish data.json */
+MACRO CloseEntitiesAndRepublish(OBJECT screen, OBJECT wrdtype, INTEGER ARRAY ids)
+{
+  IF (screen->RunSimpleScreen("question", "Weet je zeker dat je dit wilt verwijderen?") != "yes")
+    RETURN;
+
+  OBJECT work := screen->BeginUnvalidatedWork();
+  FOREVERY (INTEGER id FROM ids)
+    wrdtype->GetEntity(id)->CloseEntity();
+  RepublishDataJson();
+  work->Finish();
+}
