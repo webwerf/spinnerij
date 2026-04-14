@@ -1,3 +1,5 @@
 <group xmlns="http://www.webhare.net/xmlns/system/testinfo">
   <test name="api" script="api.unittest.ts" />
+  <test name="data" script="data.unittest.ts" />
+  <test name="tollium" script="tollium.whscr" />
 </group>

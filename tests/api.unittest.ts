@@ -6,11 +6,14 @@ import { reset } from "@webhare/test-backend";
 import * as test from "@webhare/test";
 import * as whdb from "@webhare/whdb";
 import { WRDSchema } from "@webhare/wrd";
+import { spinnerijSchema } from "wh:wrd/spinnerij";
 import { SpinnerijApi } from "@mod-spinnerij/js/api";
+
+type SpinnerijSchema = typeof spinnerijSchema;
 
 const TEST_SCHEMA_TAG = "webhare_testsuite:spinnerij";
 
-let testSchema: WRDSchema;
+let testSchema: SpinnerijSchema;
 let api: SpinnerijApi;
 
 async function setup(): Promise<void> {
@@ -18,7 +21,7 @@ async function setup(): Promise<void> {
     wrdSchema: TEST_SCHEMA_TAG,
     schemaDefinitionResource: "mod::spinnerij/data/wrdschema.xml",
   });
-  testSchema = new WRDSchema(TEST_SCHEMA_TAG);
+  testSchema = new WRDSchema(TEST_SCHEMA_TAG) as unknown as SpinnerijSchema;
   api = new SpinnerijApi(testSchema);
 }
 
@@ -133,4 +136,238 @@ async function testGetReservations(): Promise<void> {
   test.eq("Piet de Vries", reservation!.requesterName, "Requester name should match");
 }
 
-test.run([setup, testGetRooms, testGetTenants, testGetSupplyDemandItems, testGetReports, testGetReservations]);
+// --- Empty results ---
+
+async function testEmptyResults(): Promise<void> {
+  const rooms = await api.getRooms();
+  test.eq(0, rooms.length, "getRooms should return empty array when no rooms exist");
+
+  const tenants = await api.getTenants();
+  test.eq(0, tenants.length, "getTenants should return empty array when no tenants exist");
+
+  const items = await api.getSupplyDemandItems();
+  test.eq(0, items.length, "getSupplyDemandItems should return empty array when no items exist");
+
+  const reports = await api.getReports();
+  test.eq(0, reports.length, "getReports should return empty array when no reports exist");
+
+  const reservations = await api.getReservations();
+  test.eq(0, reservations.length, "getReservations should return empty array when no reservations exist");
+}
+
+// --- Sorting tests ---
+
+async function testRoomsSortByOrdering(): Promise<void> {
+  await whdb.runInWork(async () => {
+    await testSchema.insert("room", { wrdTitle: "Zaal C", wrdOrdering: 3 });
+    await testSchema.insert("room", { wrdTitle: "Zaal A", wrdOrdering: 1 });
+    await testSchema.insert("room", { wrdTitle: "Zaal B", wrdOrdering: 2 });
+  });
+
+  const rooms = await api.getRooms();
+  test.eq(3, rooms.length, "Should return 3 rooms");
+  test.eq("Zaal A", rooms[0].wrdTitle, "First room should have lowest ordering");
+  test.eq("Zaal B", rooms[1].wrdTitle, "Second room should have middle ordering");
+  test.eq("Zaal C", rooms[2].wrdTitle, "Third room should have highest ordering");
+}
+
+async function testTenantsSortAlphabetically(): Promise<void> {
+  await whdb.runInWork(async () => {
+    await testSchema.insert("tenant", { wrdTitle: "Zebra Studio" });
+    await testSchema.insert("tenant", { wrdTitle: "Atelier Bloem" });
+    await testSchema.insert("tenant", { wrdTitle: "Kantoor Midden" });
+  });
+
+  const tenants = await api.getTenants();
+  test.eq(3, tenants.length, "Should return 3 tenants");
+  test.eq("Atelier Bloem", tenants[0].wrdTitle, "First tenant should be alphabetically first");
+  test.eq("Kantoor Midden", tenants[1].wrdTitle, "Second tenant should be alphabetically second");
+  test.eq("Zebra Studio", tenants[2].wrdTitle, "Third tenant should be alphabetically third");
+}
+
+async function testReservationsSortByDateDescending(): Promise<void> {
+  await whdb.runInWork(async () => {
+    const roomId = await testSchema.insert("room", { wrdTitle: "Testzaal" });
+    await testSchema.insert("reservation", {
+      room: roomId,
+      date: new Date("2026-01-01T10:00:00Z"),
+      description: "Oudste",
+      status: "aangevraagd",
+    });
+    await testSchema.insert("reservation", {
+      room: roomId,
+      date: new Date("2026-06-15T10:00:00Z"),
+      description: "Middelste",
+      status: "aangevraagd",
+    });
+    await testSchema.insert("reservation", {
+      room: roomId,
+      date: new Date("2026-12-31T10:00:00Z"),
+      description: "Nieuwste",
+      status: "bevestigd",
+    });
+  });
+
+  const reservations = await api.getReservations();
+  test.eq(3, reservations.length, "Should return 3 reservations");
+  test.eq("Nieuwste", reservations[0].description, "First should be newest date");
+  test.eq("Middelste", reservations[1].description, "Second should be middle date");
+  test.eq("Oudste", reservations[2].description, "Third should be oldest date");
+}
+
+// --- Multiple entities & all statuses ---
+
+async function testMultipleReportsAllStatuses(): Promise<void> {
+  await whdb.runInWork(async () => {
+    await testSchema.insert("report", {
+      category: "verlichting",
+      description: "Melding verlichting",
+      reporterName: "Tester A",
+      status: "open",
+    });
+    await testSchema.insert("report", {
+      category: "sanitair",
+      description: "Melding sanitair",
+      reporterName: "Tester B",
+      status: "in_behandeling",
+    });
+    await testSchema.insert("report", {
+      category: "overig",
+      description: "Melding overig",
+      reporterName: "Tester C",
+      status: "afgehandeld",
+    });
+  });
+
+  const reports = await api.getReports();
+  test.eq(3, reports.length, "Should return 3 reports");
+
+  const statuses = reports.map((r) => r.status);
+  test.assert(statuses.includes("open"), "Should include open report");
+  test.assert(statuses.includes("in_behandeling"), "Should include in_behandeling report");
+  test.assert(statuses.includes("afgehandeld"), "Should include afgehandeld report");
+
+  const categories = reports.map((r) => r.category);
+  test.assert(categories.includes("verlichting"), "Should include verlichting category");
+  test.assert(categories.includes("sanitair"), "Should include sanitair category");
+  test.assert(categories.includes("overig"), "Should include overig category");
+}
+
+async function testMultipleSupplyDemandBothTypes(): Promise<void> {
+  await whdb.runInWork(async () => {
+    await testSchema.insert("supplyDemand", {
+      type: "aanbod",
+      wrdTitle: "Lasapparaat te leen",
+      description: "MIG/MAG lasapparaat beschikbaar",
+      author: "Auteur A",
+      organization: "Bedrijf A",
+      email: "a@example.nl",
+    });
+    await testSchema.insert("supplyDemand", {
+      type: "vraag",
+      wrdTitle: "Gezocht: opslagruimte",
+      description: "Op zoek naar 10m2 opslag",
+      author: "Auteur B",
+      organization: "Bedrijf B",
+      email: "b@example.nl",
+    });
+    await testSchema.insert("supplyDemand", {
+      type: "aanbod",
+      wrdTitle: "Bureau af te geven",
+      description: "Stevig houten bureau",
+      author: "Auteur C",
+    });
+  });
+
+  const items = await api.getSupplyDemandItems();
+  test.eq(3, items.length, "Should return 3 supply/demand items");
+
+  const aanbod = items.filter((i) => i.type === "aanbod");
+  const vraag = items.filter((i) => i.type === "vraag");
+  test.eq(2, aanbod.length, "Should have 2 aanbod items");
+  test.eq(1, vraag.length, "Should have 1 vraag item");
+}
+
+async function testReservationAllStatuses(): Promise<void> {
+  await whdb.runInWork(async () => {
+    const roomId = await testSchema.insert("room", { wrdTitle: "Statuszaal" });
+    await testSchema.insert("reservation", {
+      room: roomId,
+      date: new Date("2026-03-01T10:00:00Z"),
+      description: "Aangevraagde reservering",
+      status: "aangevraagd",
+    });
+    await testSchema.insert("reservation", {
+      room: roomId,
+      date: new Date("2026-04-01T10:00:00Z"),
+      description: "Bevestigde reservering",
+      status: "bevestigd",
+    });
+    await testSchema.insert("reservation", {
+      room: roomId,
+      date: new Date("2026-05-01T10:00:00Z"),
+      description: "Geannuleerde reservering",
+      status: "geannuleerd",
+    });
+  });
+
+  const reservations = await api.getReservations();
+  test.eq(3, reservations.length, "Should return 3 reservations");
+
+  const statuses = reservations.map((r) => r.status);
+  test.assert(statuses.includes("aangevraagd"), "Should include aangevraagd");
+  test.assert(statuses.includes("bevestigd"), "Should include bevestigd");
+  test.assert(statuses.includes("geannuleerd"), "Should include geannuleerd");
+}
+
+// --- Field completeness ---
+
+async function testRoomFieldCompleteness(): Promise<void> {
+  await whdb.runInWork(async () => {
+    await testSchema.insert("room", {
+      wrdTitle: "Compleet Atelier",
+      subtitle: "Werkruimte met alle velden",
+      capacity: 25,
+      description: "Volledig ingevulde ruimte voor test",
+      wrdOrdering: 1,
+    });
+  });
+
+  const rooms = await api.getRooms();
+  test.eq(1, rooms.length, "Should return 1 room");
+
+  const room = rooms[0];
+  test.assert(room.wrdId > 0, "wrdId should be set");
+  test.eq("Compleet Atelier", room.wrdTitle, "wrdTitle should match");
+  test.eq("Werkruimte met alle velden", room.subtitle, "subtitle should match");
+  test.eq(25, room.capacity, "capacity should match");
+  test.eq("Volledig ingevulde ruimte voor test", room.description, "description should match");
+}
+
+test.run([
+  // Basic CRUD tests
+  setup,
+  testEmptyResults,
+  testGetRooms,
+  testGetTenants,
+  testGetSupplyDemandItems,
+  testGetReports,
+  testGetReservations,
+  // Sorting tests
+  setup,
+  testRoomsSortByOrdering,
+  setup,
+  testTenantsSortAlphabetically,
+  setup,
+  testReservationsSortByDateDescending,
+  // Multiple entities & statuses
+  setup,
+  testMultipleReportsAllStatuses,
+  setup,
+  testMultipleSupplyDemandBothTypes,
+  setup,
+  testReservationAllStatuses,
+  // Field completeness
+  setup,
+  testRoomFieldCompleteness,
+]);

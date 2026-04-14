@@ -1,0 +1,265 @@
+<?wh
+
+LOADLIB "wh::datetime.whlib";
+
+LOADLIB "mod::system/lib/testframework.whlib";
+
+LOADLIB "mod::tollium/lib/testframework.whlib";
+
+LOADLIB "mod::wrd/lib/api.whlib";
+
+/*
+wh runtest spinnerij.tollium
+*/
+
+OBJECT wrdschema;
+
+MACRO Setup()
+{
+  wrdschema := OpenWRDSchema("spinnerij:spinnerij");
+}
+
+MACRO CleanAllEntities()
+{
+  testfw->BeginWork();
+  // Delete in dependency order: referencing types first
+  STRING ARRAY types := ["reservation", "report", "supply_demand", "tenant", "room"];
+  FOREVERY (STRING typename FROM types)
+  {
+    OBJECT wrdtype := wrdschema->GetType(typename);
+    RECORD ARRAY items := wrdtype->RunQuery(
+      [ outputcolumns := [ "WRD_ID" ]
+      , filters := [ [ field := "WRD_TAG", matchtype := "LIKE", value := "*" ] ]
+      , historymode := "all"
+      ]);
+    IF (Length(items) > 0)
+      wrdtype->DeleteEntities(SELECT AS INTEGER ARRAY wrd_id FROM items);
+  }
+  testfw->CommitWork();
+}
+
+// --- Tenant CRUD ---
+
+ASYNC MACRO TestCreateTenantViaUI()
+{
+  CleanAllEntities();
+  AWAIT ExpectScreenChange(+1, PTR TTLaunchApp("spinnerij:main"));
+
+  // First tab (Huurders) is selected by default
+  TestEQ(0, Length(TT("tenants")->rows), "Should start with 0 tenants");
+
+  // Add tenant via UI — access inner listedit's add button
+  AWAIT ExpectScreenChange(+1, PTR TT("tenants->entities")->addbutton->tolliumclick());
+
+  topscreen->^entity->^wrd_title->value := "Test Huurder BV";
+  topscreen->^entity->^description->value := "Testbedrijf voor unit test";
+  topscreen->^entity->^category->value := "kantoor";
+  topscreen->^entity->^room->value := "Ruimte 101";
+  topscreen->^entity->^website->value := "https://testhuurder.nl";
+
+  AWAIT ExpectScreenChange(-1, PTR TTClick(":Ok"));
+
+  // Verify in list
+  TestEQ(1, Length(TT("tenants")->rows), "Should have 1 tenant after creation");
+
+  AWAIT ExpectScreenChange(-1, PTR TTEscape); // close app
+}
+
+ASYNC MACRO TestEditTenantViaUI()
+{
+  CleanAllEntities();
+
+  // Create tenant via backend
+  testfw->BeginWork();
+  OBJECT tenantent := wrdschema->GetType("tenant")->EnsureEntity([ wrd_title := "Originele Naam"
+                                                                   , category := "sport"
+                                                                   , room := "Zaal A"
+                                                                   ], [ entitykey := ["WRD_TITLE"] ]);
+  INTEGER tenantid := tenantent->id;
+  testfw->CommitWork();
+
+  AWAIT ExpectScreenChange(+1, PTR TTLaunchApp("spinnerij:main"));
+
+  // Select and edit
+  TT("tenants")->value := [tenantid];
+  AWAIT ExpectScreenChange(+1, PTR TT("tenants->entities")->editbutton->tolliumclick());
+
+  // Verify loaded values
+  TestEQ("Originele Naam", topscreen->^entity->^wrd_title->value);
+  TestEQ("sport", topscreen->^entity->^category->value);
+
+  // Change fields
+  topscreen->^entity->^wrd_title->value := "Aangepaste Naam";
+  topscreen->^entity->^category->value := "creatief";
+
+  AWAIT ExpectScreenChange(-1, PTR TTClick(":Ok"));
+
+  // Reopen to verify changes persisted
+  TT("tenants")->value := [tenantid];
+  AWAIT ExpectScreenChange(+1, PTR TT("tenants->entities")->editbutton->tolliumclick());
+
+  TestEQ("Aangepaste Naam", topscreen->^entity->^wrd_title->value);
+  TestEQ("creatief", topscreen->^entity->^category->value);
+
+  AWAIT ExpectScreenChange(-1, PTR TTEscape); // close edit
+  AWAIT ExpectScreenChange(-1, PTR TTEscape); // close app
+}
+
+ASYNC MACRO TestDeleteTenantViaUI()
+{
+  CleanAllEntities();
+
+  // Create tenant via backend
+  testfw->BeginWork();
+  INTEGER tenantid := wrdschema->GetType("tenant")->EnsureEntity([ wrd_title := "Te Verwijderen" ], [ entitykey := ["WRD_TITLE"] ])->id;
+  testfw->CommitWork();
+
+  AWAIT ExpectScreenChange(+1, PTR TTLaunchApp("spinnerij:main"));
+
+  TestEQ(1, Length(TT("tenants")->rows), "Should have 1 tenant");
+
+  // Select and delete — OnDeleteEntities shows confirmation via RunSimpleScreen
+  TT("tenants")->value := [tenantid];
+  AWAIT ExpectAndAnswerMessageBox("yes", PTR TT("tenants->entities")->deletebutton->tolliumclick(), [ messagemask := "*verwijderen*" ]);
+
+  TestEQ(0, Length(TT("tenants")->rows), "Should have 0 tenants after delete");
+
+  AWAIT ExpectScreenChange(-1, PTR TTEscape); // close app
+}
+
+// --- Settings screen (Rooms) ---
+
+ASYNC MACRO TestSettingsCreateRoom()
+{
+  CleanAllEntities();
+  AWAIT ExpectScreenChange(+1, PTR TTLaunchApp("spinnerij:main"));
+
+  // Open Settings screen
+  AWAIT ExpectScreenChange(+1, PTR TTClick("settings"));
+
+  TestEQ(0, Length(TT("rooms")->rows), "Should start with 0 rooms");
+
+  // Add room
+  AWAIT ExpectScreenChange(+1, PTR TT("rooms->entities")->addbutton->tolliumclick());
+
+  topscreen->^entity->^wrd_title->value := "Testzaal";
+  topscreen->^entity->^subtitle->value := "Grote zaal begane grond";
+  topscreen->^entity->^capacity->value := 30;
+  topscreen->^entity->^description->value := "Ruime zaal met natuurlijk licht";
+
+  AWAIT ExpectScreenChange(-1, PTR TTClick(":Ok"));
+
+  TestEQ(1, Length(TT("rooms")->rows), "Should have 1 room after creation");
+
+  // Close settings (footer button)
+  AWAIT ExpectScreenChange(-1, PTR TTClick(":Close"));
+
+  // Close app
+  AWAIT ExpectScreenChange(-1, PTR TTEscape);
+}
+
+ASYNC MACRO TestSettingsEditRoom()
+{
+  CleanAllEntities();
+
+  // Create room via backend
+  testfw->BeginWork();
+  INTEGER roomid := wrdschema->GetType("room")->EnsureEntity([ wrd_title := "Oude Zaal"
+                                                              , subtitle := "Oude subtitle"
+                                                              , capacity := 10
+                                                              ], [ entitykey := ["WRD_TITLE"] ])->id;
+  testfw->CommitWork();
+
+  AWAIT ExpectScreenChange(+1, PTR TTLaunchApp("spinnerij:main"));
+  AWAIT ExpectScreenChange(+1, PTR TTClick("settings"));
+
+  TestEQ(1, Length(TT("rooms")->rows), "Should have 1 room");
+
+  // Select and edit
+  TT("rooms")->value := [roomid];
+  AWAIT ExpectScreenChange(+1, PTR TT("rooms->entities")->editbutton->tolliumclick());
+
+  TestEQ("Oude Zaal", topscreen->^entity->^wrd_title->value);
+
+  // Change fields
+  topscreen->^entity->^wrd_title->value := "Nieuwe Zaal";
+  topscreen->^entity->^capacity->value := 50;
+
+  AWAIT ExpectScreenChange(-1, PTR TTClick(":Ok"));
+
+  // Reopen to verify
+  TT("rooms")->value := [roomid];
+  AWAIT ExpectScreenChange(+1, PTR TT("rooms->entities")->editbutton->tolliumclick());
+
+  TestEQ("Nieuwe Zaal", topscreen->^entity->^wrd_title->value);
+  TestEQ(50, topscreen->^entity->^capacity->value);
+
+  AWAIT ExpectScreenChange(-1, PTR TTEscape); // close edit
+  AWAIT ExpectScreenChange(-1, PTR TTClick(":Close")); // close settings
+  AWAIT ExpectScreenChange(-1, PTR TTEscape); // close app
+}
+
+// --- Report ---
+
+ASYNC MACRO TestCreateReportViaUI()
+{
+  CleanAllEntities();
+  AWAIT ExpectScreenChange(+1, PTR TTLaunchApp("spinnerij:main"));
+
+  // Open add report screen (reports is on the Meldingen tab)
+  AWAIT ExpectScreenChange(+1, PTR TT("reports->entities")->addbutton->tolliumclick());
+
+  topscreen->^entity->^category->value := "verlichting";
+  topscreen->^entity->^description->value := "TL-buis in gang knippert";
+  topscreen->^entity->^reporter_name->value := "Jan Jansen";
+  topscreen->^entity->^reporter_email->value := "jan@example.nl";
+  topscreen->^entity->^status->value := "open";
+
+  AWAIT ExpectScreenChange(-1, PTR TTClick(":Ok"));
+
+  TestEQ(1, Length(TT("reports")->rows), "Should have 1 report");
+
+  AWAIT ExpectScreenChange(-1, PTR TTEscape); // close app
+}
+
+// --- Reservation (needs room reference) ---
+
+ASYNC MACRO TestCreateReservationViaUI()
+{
+  CleanAllEntities();
+
+  // Create a room first (required foreign key)
+  testfw->BeginWork();
+  INTEGER roomid := wrdschema->GetType("room")->EnsureEntity([ wrd_title := "Vergaderzaal" ], [ entitykey := ["WRD_TITLE"] ])->id;
+  testfw->CommitWork();
+
+  AWAIT ExpectScreenChange(+1, PTR TTLaunchApp("spinnerij:main"));
+
+  // Open add reservation screen
+  AWAIT ExpectScreenChange(+1, PTR TT("reservations->entities")->addbutton->tolliumclick());
+
+  topscreen->^entity->^room->value := roomid;
+  topscreen->^entity->^date->value := MakeDateTime(2026, 5, 1, 14, 0, 0);
+  topscreen->^entity->^requester_name->value := "Piet de Vries";
+  topscreen->^entity->^requester_email->value := "piet@example.nl";
+  topscreen->^entity->^description->value := "Teamvergadering Q2";
+  topscreen->^entity->^status->value := "aangevraagd";
+
+  AWAIT ExpectScreenChange(-1, PTR TTClick(":Ok"));
+
+  TestEQ(1, Length(TT("reservations")->rows), "Should have 1 reservation");
+
+  AWAIT ExpectScreenChange(-1, PTR TTEscape); // close app
+}
+
+RunTestFramework([ PTR Setup
+                 , PTR TestCreateTenantViaUI
+                 , PTR TestEditTenantViaUI
+                 , PTR TestDeleteTenantViaUI
+                 , PTR TestSettingsCreateRoom
+                 , PTR TestSettingsEditRoom
+                 , PTR TestCreateReportViaUI
+                 , PTR TestCreateReservationViaUI
+                 ]
+                 , [ testusers := [ [ login := "admin", grantrights := [ "system:sysop" ] ] ] ]
+                 );
