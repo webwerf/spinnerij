@@ -29,8 +29,8 @@ export const Colors = {
   divider: "#EDE7DF",
 
   // Tab bar
-  tabBar: "#2D5E40",
-  tabBarInactive: "rgba(255,255,255,0.55)",
-  tabBarActive: "#FFFFFF",
-  tabBarBorder: "#1E4A30",
+  tabBar: "#FFFFFF",
+  tabBarInactive: "#8A8A8A",
+  tabBarActive: "#e42313",
+  tabBarBorder: "#E4DED5",
 };

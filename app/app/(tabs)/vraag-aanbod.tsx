@@ -1,12 +1,16 @@
 import { useState, useMemo } from "react";
-import { ScrollView, View, Text, StyleSheet, Pressable, Linking, RefreshControl } from "react-native";
+import { ScrollView, View, Text, TextInput, StyleSheet, Pressable, Linking, RefreshControl, Modal, Platform, Alert, KeyboardAvoidingView } from "react-native";
 import { Colors } from "@/constants/Colors";
 import { useSpinnerijData } from "@/hooks/useSpinnerijData";
 import type { SupplyDemandItem } from "@/constants/types";
+import { Dropdown } from "@/components/Dropdown";
 
 import { WHATSAPP_BASE } from "@/constants/api";
 
-const WHATSAPP_URL = `${WHATSAPP_BASE}${encodeURIComponent("Hoi Inge, ik wil graag iets plaatsen op Vraag & Aanbod")}`;
+const TYPE_OPTIONS = [
+  { label: "🔍 Vraag", value: "vraag" },
+  { label: "🔖 Aanbod", value: "aanbod" },
+];
 
 type Filter = "alles" | "vraag" | "aanbod";
 
@@ -56,6 +60,9 @@ function TypeBadge({ type }: { type: SupplyDemandItem["type"] }) {
 export default function VraagAanbodScreen() {
   const { data, loading, error, refresh } = useSpinnerijData();
   const [filter, setFilter] = useState<Filter>("alles");
+  const [modalVisible, setModalVisible] = useState(false);
+  const [formType, setFormType] = useState("");
+  const [formDescription, setFormDescription] = useState("");
 
   const items = data?.supplydemanditems ?? [];
 
@@ -65,7 +72,39 @@ export default function VraagAanbodScreen() {
   );
 
   function handleAdd() {
-    Linking.openURL(WHATSAPP_URL);
+    setModalVisible(true);
+  }
+
+  function handleCloseModal() {
+    setModalVisible(false);
+    setFormType("");
+    setFormDescription("");
+  }
+
+  function handleSubmit() {
+    if (!formType) {
+      if (Platform.OS === "web") {
+        window.alert("Kies een type (Vraag of Aanbod)");
+      } else {
+        Alert.alert("Kies een type (Vraag of Aanbod)");
+      }
+      return;
+    }
+    if (!formDescription.trim()) {
+      if (Platform.OS === "web") {
+        window.alert("Vul een omschrijving in");
+      } else {
+        Alert.alert("Vul een omschrijving in");
+      }
+      return;
+    }
+
+    const typeLabel = formType === "vraag" ? "Vraag" : "Aanbod";
+    const message = encodeURIComponent(
+      `Nieuw bericht op Vraag & Aanbod\n\nType: ${typeLabel}\nOmschrijving:\n\n${formDescription.trim()}`
+    );
+    Linking.openURL(`${WHATSAPP_BASE}${message}`);
+    handleCloseModal();
   }
 
   function handleEmail(email: string) {
@@ -155,6 +194,50 @@ export default function VraagAanbodScreen() {
           </View>
         )}
       </ScrollView>
+
+      <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={handleCloseModal}>
+        <Pressable style={styles.modalOverlay} onPress={handleCloseModal}>
+          <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
+            <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Nieuw bericht plaatsen</Text>
+                <Pressable style={styles.modalClose} onPress={handleCloseModal}>
+                  <Text style={styles.modalCloseText}>✕</Text>
+                </Pressable>
+              </View>
+
+              <ScrollView style={styles.modalBody} keyboardShouldPersistTaps="handled">
+                <Text style={styles.modalLabel}>Type</Text>
+                <Dropdown
+                  value={formType}
+                  placeholder="Kies type"
+                  options={TYPE_OPTIONS}
+                  onChange={setFormType}
+                />
+
+                <Text style={styles.modalLabel}>Omschrijving</Text>
+                <TextInput
+                  style={styles.modalTextarea}
+                  placeholder="Beschrijf je vraag of aanbod..."
+                  placeholderTextColor={Colors.textLight}
+                  value={formDescription}
+                  onChangeText={setFormDescription}
+                  multiline
+                  numberOfLines={6}
+                  textAlignVertical="top"
+                />
+              </ScrollView>
+
+              <Pressable
+                style={({ pressed }) => [styles.modalSubmitButton, pressed && styles.modalSubmitButtonPressed]}
+                onPress={handleSubmit}
+              >
+                <Text style={styles.modalSubmitButtonText}>Versturen via WhatsApp 🚀</Text>
+              </Pressable>
+            </View>
+          </KeyboardAvoidingView>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -362,5 +445,82 @@ const styles = StyleSheet.create({
     height: 200,
     marginHorizontal: 16,
     marginBottom: 12,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "center",
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 8,
+    maxHeight: "80%",
+  },
+  modalBody: {
+    flexShrink: 1,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: Colors.text,
+  },
+  modalClose: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.background,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalCloseText: {
+    fontSize: 16,
+    color: Colors.textSecondary,
+    fontWeight: "600",
+  },
+  modalLabel: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.text,
+    marginBottom: 8,
+    marginTop: 12,
+  },
+  modalTextarea: {
+    backgroundColor: Colors.background,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: Colors.text,
+    minHeight: 120,
+    marginBottom: 16,
+  },
+  modalSubmitButton: {
+    backgroundColor: Colors.accent,
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  modalSubmitButtonPressed: {
+    opacity: 0.8,
+  },
+  modalSubmitButtonText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
 });
