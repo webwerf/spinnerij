@@ -14,7 +14,7 @@ const CATEGORIES = [
   "Overig",
 ];
 
-const WHATSAPP_BASE = "https://wa.me/31630415725?text=";
+import { WHATSAPP_BASE } from "@/constants/api";
 
 export default function MeldingScreen() {
   const [category, setCategory] = useState("");

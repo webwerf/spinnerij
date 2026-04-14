@@ -4,7 +4,9 @@ import { Colors } from "@/constants/Colors";
 import { useSpinnerijData } from "@/hooks/useSpinnerijData";
 import type { SupplyDemandItem } from "@/constants/types";
 
-const WHATSAPP_URL = "https://wa.me/31534500000?text=Hoi%20Inge%2C%20ik%20wil%20graag%20iets%20plaatsen%20op%20Vraag%20%26%20Aanbod";
+import { WHATSAPP_BASE } from "@/constants/api";
+
+const WHATSAPP_URL = `${WHATSAPP_BASE}${encodeURIComponent("Hoi Inge, ik wil graag iets plaatsen op Vraag & Aanbod")}`;
 
 type Filter = "alles" | "vraag" | "aanbod";
 
