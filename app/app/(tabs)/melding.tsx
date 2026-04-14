@@ -14,7 +14,7 @@ const CATEGORIES = [
   "Overig",
 ];
 
-const WHATSAPP_BASE = "https://wa.me/31534500000?text=";
+const WHATSAPP_BASE = "https://wa.me/31630415725?text=";
 
 export default function MeldingScreen() {
   const [category, setCategory] = useState("");
@@ -39,7 +39,7 @@ export default function MeldingScreen() {
     }
 
     const message = encodeURIComponent(
-      `Melding - ${category}\n\n${description.trim()}`
+      `Nieuwe melding in de Spinnerij app\n\nCategorie: ${category}\nOmschrijving:\n\n${description.trim()}`
     );
     Linking.openURL(`${WHATSAPP_BASE}${message}`);
   }
@@ -69,12 +69,6 @@ export default function MeldingScreen() {
           numberOfLines={6}
           textAlignVertical="top"
         />
-
-        <Text style={styles.label}>Foto (optioneel)</Text>
-        <View style={styles.photoUpload}>
-          <Text style={styles.photoIcon}>📷</Text>
-          <Text style={styles.photoText}>Foto toevoegen</Text>
-        </View>
 
         <Pressable
           style={({ pressed }) => [styles.submitButton, pressed && styles.submitButtonPressed]}
@@ -138,26 +132,6 @@ const styles = StyleSheet.create({
     color: Colors.text,
     minHeight: 120,
     marginBottom: 16,
-  },
-  photoUpload: {
-    backgroundColor: Colors.background,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderStyle: "dashed",
-    paddingVertical: 30,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 20,
-    gap: 8,
-  },
-  photoIcon: {
-    fontSize: 28,
-  },
-  photoText: {
-    fontSize: 14,
-    color: Colors.textLight,
-    fontWeight: "500",
   },
   submitButton: {
     backgroundColor: Colors.accent,
