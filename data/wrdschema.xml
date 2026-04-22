@@ -6,6 +6,8 @@
       <free tag="wrd_title" required="1" />
       <free tag="subtitle" />
       <integer tag="capacity" />
+      <integer tag="area_sqm" />
+      <integer tag="floor_level" />
       <free tag="description" />
       <image tag="image" />
       <integer tag="wrd_ordering" />
@@ -21,6 +23,16 @@
       <free tag="room" />
       <image tag="logo" />
       <free tag="website" />
+      <email tag="email" />
+      <free tag="phone" />
+      <free tag="address" />
+      <free tag="facebook" />
+      <free tag="linkedin" />
+      <free tag="instagram" />
+      <free tag="youtube" />
+      <free tag="twitter" />
+      <free tag="pinterest" />
+      <free tag="vimeo" />
     </attributes>
   </object>
 

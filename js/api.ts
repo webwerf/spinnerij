@@ -18,6 +18,16 @@ export interface Tenant {
   category: string;
   room: string;
   website: string;
+  email: string;
+  phone: string;
+  address: string;
+  facebook: string;
+  linkedin: string;
+  instagram: string;
+  youtube: string;
+  twitter: string;
+  pinterest: string;
+  vimeo: string;
 }
 
 export interface SupplyDemandItem {
@@ -69,7 +79,11 @@ export class SpinnerijApi {
   public async getTenants(): Promise<Tenant[]> {
     const tenants = await this.#schema
       .query("tenant")
-      .select(["wrdId", "wrdTitle", "description", "category", "room", "website"])
+      .select([
+        "wrdId", "wrdTitle", "description", "category", "room", "website",
+        "email", "phone", "address",
+        "facebook", "linkedin", "instagram", "youtube", "twitter", "pinterest", "vimeo",
+      ])
       .execute() as Tenant[];
     tenants.sort((a, b) => a.wrdTitle.localeCompare(b.wrdTitle));
     return tenants;

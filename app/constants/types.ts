@@ -14,6 +14,16 @@ export interface Tenant {
   category: string;
   room: string;
   website: string;
+  email: string;
+  phone: string;
+  address: string;
+  facebook: string;
+  linkedin: string;
+  instagram: string;
+  youtube: string;
+  twitter: string;
+  pinterest: string;
+  vimeo: string;
 }
 
 export interface SupplyDemandItem {

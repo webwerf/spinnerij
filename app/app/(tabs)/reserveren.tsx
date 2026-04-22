@@ -57,10 +57,12 @@ export default function ReserverenScreen() {
             <Text style={styles.roomName}>
               {room.wrdtitle} - {room.subtitle}
             </Text>
-            <View style={styles.capacityBadge}>
-              <Text style={styles.capacityIcon}>👥</Text>
-              <Text style={styles.capacityText}>Max. {room.capacity} personen</Text>
-            </View>
+            {room.capacity > 0 && (
+              <View style={styles.capacityBadge}>
+                <Text style={styles.capacityIcon}>👥</Text>
+                <Text style={styles.capacityText}>Max. {room.capacity} personen</Text>
+              </View>
+            )}
             <Text style={styles.description}>{room.description}</Text>
             <Pressable
               style={({ pressed }) => [styles.reserveButton, pressed && styles.reserveButtonPressed]}

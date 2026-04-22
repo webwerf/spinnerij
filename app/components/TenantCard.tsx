@@ -15,10 +15,65 @@ function getAvatarUrl(name: string): string {
   return `https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&background=F4A261&color=fff&size=128&font-size=0.4&bold=true`;
 }
 
-export function TenantCard({ tenant }: TenantCardProps) {
-  function handleWebsite() {
-    Linking.openURL(tenant.website);
+function stripHtml(html: string): string {
+  if (!html) return "";
+  return html
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, "\"")
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+interface ContactAction {
+  key: string;
+  icon: string;
+  label: string;
+  url: string;
+}
+
+function buildContactActions(tenant: Tenant): ContactAction[] {
+  const actions: ContactAction[] = [];
+  if (tenant.phone) {
+    actions.push({ key: "phone", icon: "✆", label: "Bel ons", url: `tel:${tenant.phone.replace(/\s/g, "")}` });
   }
+  if (tenant.email) {
+    actions.push({ key: "email", icon: "✉", label: "Stuur ons een e-mail", url: `mailto:${tenant.email}` });
+  }
+  if (tenant.website) {
+    actions.push({ key: "website", icon: "↗", label: "Bezoek onze website", url: tenant.website });
+  }
+  if (tenant.facebook) {
+    actions.push({ key: "facebook", icon: "f", label: "Facebook", url: tenant.facebook });
+  }
+  if (tenant.instagram) {
+    actions.push({ key: "instagram", icon: "ig", label: "Instagram", url: tenant.instagram });
+  }
+  if (tenant.linkedin) {
+    actions.push({ key: "linkedin", icon: "in", label: "LinkedIn", url: tenant.linkedin });
+  }
+  if (tenant.youtube) {
+    actions.push({ key: "youtube", icon: "yt", label: "YouTube", url: tenant.youtube });
+  }
+  if (tenant.twitter) {
+    actions.push({ key: "twitter", icon: "tw", label: "Twitter", url: tenant.twitter });
+  }
+  if (tenant.pinterest) {
+    actions.push({ key: "pinterest", icon: "pt", label: "Pinterest", url: tenant.pinterest });
+  }
+  if (tenant.vimeo) {
+    actions.push({ key: "vimeo", icon: "vi", label: "Vimeo", url: tenant.vimeo });
+  }
+  return actions;
+}
+
+export function TenantCard({ tenant }: TenantCardProps) {
+  const actions = buildContactActions(tenant);
+  const description = stripHtml(tenant.description);
 
   return (
     <View style={styles.card}>
@@ -28,19 +83,30 @@ export function TenantCard({ tenant }: TenantCardProps) {
       <Text style={styles.name} numberOfLines={2}>
         {tenant.wrdtitle}
       </Text>
-      <Text style={styles.description} numberOfLines={1}>
-        {tenant.description}
-      </Text>
-      <View style={styles.roomBadge}>
-        <Text style={styles.roomText}>{tenant.room}</Text>
-      </View>
-      <Pressable
-        style={({ pressed }) => [styles.websiteLink, pressed && styles.websiteLinkPressed]}
-        onPress={handleWebsite}
-      >
-        <Text style={styles.websiteIcon}>↗</Text>
-        <Text style={styles.websiteText}>Website bezoeken</Text>
-      </Pressable>
+      {description.length > 0 && (
+        <Text style={styles.description}>{description}</Text>
+      )}
+      {tenant.room.length > 0 && (
+        <View style={styles.roomBadge}>
+          <Text style={styles.roomText}>{tenant.room}</Text>
+        </View>
+      )}
+      {actions.length > 0 && (
+        <View style={styles.actions}>
+          {actions.map((action) => (
+            <Pressable
+              key={action.key}
+              style={({ pressed }) => [styles.actionRow, pressed && styles.actionRowPressed]}
+              onPress={() => { void Linking.openURL(action.url); }}
+            >
+              <View style={styles.actionIconCircle}>
+                <Text style={styles.actionIconText}>{action.icon}</Text>
+              </View>
+              <Text style={styles.actionLabel}>{action.label}</Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
     </View>
   );
 }
@@ -77,6 +143,7 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: 13,
+    lineHeight: 20,
     color: Colors.textSecondary,
     marginBottom: 10,
   },
@@ -93,23 +160,35 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: Colors.accent,
   },
-  websiteLink: {
+  actions: {
+    marginTop: "auto",
+    gap: 8,
+  },
+  actionRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    marginTop: "auto",
+    gap: 10,
   },
-  websiteLinkPressed: {
+  actionRowPressed: {
     opacity: 0.6,
   },
-  websiteIcon: {
-    fontSize: 14,
-    color: Colors.accent,
-    fontWeight: "700",
+  actionIconCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#FDF0EF",
+    justifyContent: "center",
+    alignItems: "center",
   },
-  websiteText: {
+  actionIconText: {
+    fontSize: 13,
+    color: Colors.accent,
+    fontWeight: "800",
+  },
+  actionLabel: {
     fontSize: 13,
     color: Colors.accent,
     fontWeight: "600",
+    flexShrink: 1,
   },
 });
