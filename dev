@@ -11,7 +11,7 @@
 #   eval "$(~/whrunkit/myserver/whdata/installedmodules/spinnerij/dev --completions)"
 
 if [ "$1" = "--completions" ]; then
-  echo 'complete -W "start webhare wh --help" ./dev'
+  echo 'complete -W "start webhare wh --local --prod --help" ./dev'
   exit 0
 fi
 
@@ -27,6 +27,7 @@ show_help() {
   echo "  webhare (wh)         Web deployen naar WebHare"
   echo ""
   echo "Flags:"
+  echo "  start                --local (lokale API) | --prod (sites.webwerf.nl)"
   echo "  webhare              --local (lokale API)"
   echo ""
   echo "Without command: interactive menu"
@@ -36,11 +37,33 @@ show_help() {
 # start — Dev server starten
 # ──────────────────────────────────────────────
 do_start() {
+  local API_URL=""
+
+  for arg in "$@"; do
+    case $arg in
+      --local) API_URL="http://127.0.0.1:8001/spinnerij" ;;
+      --prod)  API_URL="https://sites.webwerf.nl/spinnerij-app" ;;
+    esac
+  done
+
+  if [ -z "$API_URL" ]; then
+    echo ""
+    echo "Met welke API wil je verbinden?"
+    echo "  1) Productie — sites.webwerf.nl (default)"
+    echo "  2) Lokaal — 127.0.0.1:8001"
+    read -p "Kies [1-2]: " -n 1 -r
+    echo
+    case $REPLY in
+      2) API_URL="http://127.0.0.1:8001/spinnerij" ;;
+      *) API_URL="https://sites.webwerf.nl/spinnerij-app" ;;
+    esac
+  fi
+
   echo ""
   echo "Dev server starten..."
-  echo "  → npx expo start --web"
+  echo "  → EXPO_PUBLIC_API_URL=$API_URL npx expo start --web"
   echo ""
-  cd "$APP_DIR" && npx expo start --web
+  cd "$APP_DIR" && EXPO_PUBLIC_API_URL="$API_URL" npx expo start --web
 }
 
 # ──────────────────────────────────────────────
