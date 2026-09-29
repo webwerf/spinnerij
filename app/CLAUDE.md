@@ -37,7 +37,8 @@ No test runner or linter is configured.
 
 ## Key Dependencies
 
-- Expo SDK 55 (canary), React 19, React Native 0.83
+- Expo SDK 55 (stable), React 19, React Native 0.83
+- After an Expo upgrade, run `scripts/rebuild-fonts.sh`: font hashes change and the build otherwise references woff2 files that `scripts/fonts/` doesn't have
 - `expo-router` for navigation
 - `react-native-reanimated` for animations
 - `react-native-web` for web support
