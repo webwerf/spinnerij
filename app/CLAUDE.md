@@ -46,9 +46,10 @@ No test runner or linter is configured.
 
 ## Deployment
 
-- **WebHare**: `./dev webhare` (from module root) builds Expo web and copies to `web/dist/` in the module root, then deploy with `wh devkit:push`
+- **WebHare**: `./dev webhare` (from module root) builds Expo web and copies to `web/dist/` in the module root, then deploy with `wh ww:push https://cms.webwerf.nl/ spinnerij`. `web/dist/` is gitignored, so the push ships whatever is on disk: always build (without `--local`) right before pushing
 - **Build**: `scripts/build-webhare.sh` handles font relocation, .ttf→.woff2 conversion, and filename lowercasing for WebHare compatibility
-- **Hosting**: Webruleset `spinnerij-app` in `moduledefinition.xml` serves the SPA via `handlebydir` + `handlebyscript` fallbacks
+- **Hosting**: Webruleset `spinnerij-app` in `moduledefinition.xml` serves the SPA via `handlebydir` + `handlebyscript` fallbacks. It is mounted on `https://sites.tech42.nl/spinnerij-app/` by an access rule (Toegangsregel) on cms.webwerf.nl, which is not in code; `app.json` `experiments.baseUrl` must match that path
+- **Packaging**: `app/`, `scripts/fonts/` and `.playwright-mcp/` are excluded from the module push; the server only needs `web/dist/`
 - **GitHub**: `webwerf/spinnerij`
 
 ## Project Memory
@@ -69,5 +70,6 @@ No test runner or linter is configured.
 - `react-native-modal` package is incompatible with React 19 / Expo SDK 55 — uses deprecated `TouchableWithoutFeedback` and old ref API. Don't use it.
 - Modal backdrop dismiss on web: use `Pressable` + `StyleSheet.absoluteFill` as a *sibling* of modal content, not as a parent wrapper. Parent wrapper causes form element clicks to close the modal.
 - JSON endpoint `data.json` routes camelCase → lowercase: the `.whscr` calls `CallJS(getData)` and `EncodeJSON`s the RECORD, which lowercases all keys. So `../js/api.ts` uses `wrdTitle`, `email`, etc. while `app/constants/types.ts` uses `wrdtitle`, `email`. When adding fields: edit WRD schema → `js/api.ts` (select + Tenant interface, camelCase) → `app/constants/types.ts` (lowercase). The three-file sync is easy to miss.
-- The app targets production (`sites.tech42.nl`) by default via `EXPO_PUBLIC_API_URL`. Local backend changes to `js/api.ts` or WRD data don't appear in the app until either (a) you start dev with `./dev start --local` (points to `127.0.0.1:8001/spinnerij`) or (b) deploy via `./dev webhare` / `wh devkit:push https://cms.webwerf.nl/ spinnerij`.
+- The app targets production (`sites.tech42.nl`) by default via `EXPO_PUBLIC_API_URL`. Local backend changes to `js/api.ts` or WRD data don't appear in the app until either (a) you start dev with `./dev start --local` (points to `127.0.0.1:8001/spinnerij`) or (b) deploy via `./dev webhare` / `wh ww:push https://cms.webwerf.nl/ spinnerij`.
 - Tenant `description` field may contain WordPress HTML (`<p>`, `<!-- wp:... -->`). `TenantCard.tsx` strips it at render via a local `stripHtml()` helper — keeps source-of-truth in WRD intact so Tollium admins can still paste rich text.
+- `data.json` is only republished by edits in the Tollium app (`RepublishDataJson` in `tolliumapps/main.whlib`). A backup restore, an import script or a deploy that changes the JSON shape needs a manual republish (Publisher, or save one tenant in the Tollium app)
