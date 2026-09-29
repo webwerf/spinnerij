@@ -68,7 +68,7 @@ node -e "
     '<meta name=\"apple-mobile-web-app-capable\" content=\"yes\" />',
     '<meta name=\"apple-mobile-web-app-status-bar-style\" content=\"default\" />',
     '<meta name=\"description\" content=\"De app voor huurders en bezoekers van Spinnerij Oosterveld in Enschede\" />',
-    '<link rel=\"manifest\" href=\"/manifest.json\" />',
+    '<link rel=\"manifest\" href=\"manifest.json\" />',
   ].join('\n    ');
   html = html.replace('</head>', '    ' + headTags + '\n  </head>');
 
@@ -86,6 +86,9 @@ echo "Copying pre-built fonts..."
 FONT_DST="$DIST_DIR/assets/fonts"
 mkdir -p "$FONT_DST"
 cp "$SCRIPT_DIR/fonts/"* "$FONT_DST/"
+
+# PWA manifest icon (manifest.json references it relative to the base path)
+cp "$APP_DIR/assets/images/icon.png" "$DIST_DIR/icon.png"
 
 # Remove the node_modules directory from dist (no longer needed)
 rm -rf "$DIST_DIR/assets/node_modules"

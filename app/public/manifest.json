@@ -2,14 +2,14 @@
   "name": "Spinnerij Oosterveld",
   "short_name": "Spinnerij",
   "description": "De app voor huurders en bezoekers van Spinnerij Oosterveld",
-  "start_url": "/",
+  "start_url": ".",
   "display": "standalone",
   "background_color": "#F5F2ED",
   "theme_color": "#2D5E40",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/assets/images/icon.png",
+      "src": "icon.png",
       "sizes": "1024x1024",
       "type": "image/png"
     }
