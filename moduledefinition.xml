@@ -10,6 +10,7 @@
       <excludepath mask="app/dist*" />
       <excludepath mask="app/.vercel*" />
       <excludepath mask="*.playwright-mcp*" />
+      <excludepath mask="scripts/fonts*" />
     </packaging>
     <validation options="nowarnings">
       <exclude mask="web/*" permanent="true" why="Built Expo PWA (non-WebHare)" />
