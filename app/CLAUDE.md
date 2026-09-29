@@ -61,7 +61,7 @@ No test runner or linter is configured.
 - WhatsApp number centralized in `constants/api.ts` as `WHATSAPP_NUMBER` / `WHATSAPP_BASE` — all screens import from there
 - Huurder/room/vraag-aanbod data fetched from WebHare JSON endpoint (`/spinnerij/data.json`) via `useSpinnerijData` hook — types in `constants/types.ts`, URL in `constants/api.ts`
 - CORS for data.json is configured via `<webrule>` in siteprl.xml `<sitesettings>` — needed for cross-origin dev (Expo on different port)
-- Images/logos exist in WRD schema but are not yet included in the JSON API — screens use placeholder avatars (ui-avatars.com) and colored blocks
+- Tenant logos and room images go through the JSON as host-relative image-cache links (`logourl`, `imageurl`, built with `toResized()` in `js/api.ts`); the app resolves them with `resolveImageUrl()` from `constants/api.ts`. Missing images fall back to ui-avatars (tenants) or a colored block (rooms)
 - App lives inside a WebHare module at `installedmodules/spinnerij/app/` — root has WebHare module files (moduledefinition.xml, language/), app has Expo files
 - Build uses pre-converted fonts from `scripts/fonts/` — run `scripts/rebuild-fonts.sh` to regenerate after adding/updating font packages
 - Production API URL is `https://sites.tech42.nl/spinnerij-app` — fallback in `constants/api.ts`, use `--local` flag in build script for localhost

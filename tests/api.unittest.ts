@@ -5,6 +5,7 @@ wh runtest spinnerij.api
 import { reset } from "@webhare/test-backend";
 import * as test from "@webhare/test";
 import * as whdb from "@webhare/whdb";
+import { ResourceDescriptor } from "@webhare/services";
 import { WRDSchema } from "@webhare/wrd";
 import { spinnerijSchema } from "wh:wrd/spinnerij";
 import { SpinnerijApi } from "@mod-spinnerij/js/api";
@@ -23,6 +24,36 @@ async function setup(): Promise<void> {
   });
   testSchema = new WRDSchema(TEST_SCHEMA_TAG) as unknown as SpinnerijSchema;
   api = new SpinnerijApi(testSchema);
+}
+
+const TEST_IMAGE = "mod::spinnerij/app/assets/images/icon.png";
+
+async function testTenantLogoUrl(): Promise<void> {
+  const logo = await ResourceDescriptor.fromResource(TEST_IMAGE, { getImageMetadata: true });
+  await whdb.runInWork(async () => {
+    await testSchema.insert("tenant", { wrdTitle: "Met logo", logo });
+    await testSchema.insert("tenant", { wrdTitle: "Zonder logo" });
+  });
+
+  const tenants = await api.getTenants();
+  const withLogo = tenants.find((t) => t.wrdTitle === "Met logo");
+  const withoutLogo = tenants.find((t) => t.wrdTitle === "Zonder logo");
+  test.assert(withLogo?.logoUrl?.startsWith("/.wh/"), `Logo URL should be an image-cache link, got "${withLogo?.logoUrl}"`);
+  test.eq(null, withoutLogo?.logoUrl, "Tenant without logo should have a null logoUrl");
+}
+
+async function testRoomImageUrl(): Promise<void> {
+  const image = await ResourceDescriptor.fromResource(TEST_IMAGE, { getImageMetadata: true });
+  await whdb.runInWork(async () => {
+    await testSchema.insert("room", { wrdTitle: "Met foto", image });
+    await testSchema.insert("room", { wrdTitle: "Zonder foto" });
+  });
+
+  const rooms = await api.getRooms();
+  const withImage = rooms.find((r) => r.wrdTitle === "Met foto");
+  const withoutImage = rooms.find((r) => r.wrdTitle === "Zonder foto");
+  test.assert(withImage?.imageUrl?.startsWith("/.wh/"), `Room image URL should be an image-cache link, got "${withImage?.imageUrl}"`);
+  test.eq(null, withoutImage?.imageUrl, "Room without image should have a null imageUrl");
 }
 
 async function testGetRooms(): Promise<void> {
@@ -370,4 +401,9 @@ test.run([
   // Field completeness
   setup,
   testRoomFieldCompleteness,
+  // Image URLs
+  setup,
+  testTenantLogoUrl,
+  setup,
+  testRoomImageUrl,
 ]);

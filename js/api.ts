@@ -1,4 +1,4 @@
-import { type WRDSchema } from "@webhare/wrd";
+import type { ResourceDescriptor } from "@webhare/services";
 import { spinnerijSchema } from "wh:wrd/spinnerij";
 
 type SpinnerijSchema = typeof spinnerijSchema;
@@ -9,6 +9,7 @@ export interface Room {
   subtitle: string;
   capacity: number;
   description: string;
+  imageUrl: string | null;
 }
 
 export interface Tenant {
@@ -28,6 +29,7 @@ export interface Tenant {
   twitter: string;
   pinterest: string;
   vimeo: string;
+  logoUrl: string | null;
 }
 
 export interface SupplyDemandItem {
@@ -68,12 +70,15 @@ export class SpinnerijApi {
   }
 
   public async getRooms(): Promise<Room[]> {
-    const rooms = await this.#schema
+    const rows = await this.#schema
       .query("room")
-      .select(["wrdId", "wrdTitle", "subtitle", "capacity", "description", "wrdOrdering"])
-      .execute() as (Room & { wrdOrdering: number })[];
-    rooms.sort((a, b) => (a.wrdOrdering ?? 0) - (b.wrdOrdering ?? 0));
-    return rooms;
+      .select(["wrdId", "wrdTitle", "subtitle", "capacity", "description", "wrdOrdering", "image"])
+      .execute() as (Omit<Room, "imageUrl"> & { wrdOrdering: number; image: ResourceDescriptor | null })[];
+    rows.sort((a, b) => (a.wrdOrdering ?? 0) - (b.wrdOrdering ?? 0));
+    return rows.map(({ image, ...room }) => ({
+      ...room,
+      imageUrl: this.#imageLink(image, { method: "fill", width: 800, height: 500 }),
+    }));
   }
 
   public async getTenants(): Promise<Tenant[]> {
@@ -82,11 +87,14 @@ export class SpinnerijApi {
       .select([
         "wrdId", "wrdTitle", "description", "category", "room", "website",
         "email", "phone", "address",
-        "facebook", "linkedin", "instagram", "youtube", "twitter", "pinterest", "vimeo",
+        "facebook", "linkedin", "instagram", "youtube", "twitter", "pinterest", "vimeo", "logo",
       ])
-      .execute() as Tenant[];
+      .execute() as (Omit<Tenant, "logoUrl"> & { logo: ResourceDescriptor | null })[];
     tenants.sort((a, b) => a.wrdTitle.localeCompare(b.wrdTitle));
-    return tenants;
+    return tenants.map(({ logo, ...tenant }) => ({
+      ...tenant,
+      logoUrl: this.#imageLink(logo, { method: "fit", width: 256, height: 256 }),
+    }));
   }
 
   public async getSupplyDemandItems(): Promise<SupplyDemandItem[]> {
@@ -114,5 +122,10 @@ export class SpinnerijApi {
       .execute() as Reservation[];
     reservations.sort((a, b) => (b.date?.getTime() ?? 0) - (a.date?.getTime() ?? 0));
     return reservations;
+  }
+
+  // Image-cache links are host-relative ("/.wh/ea/uc/..."); the app resolves them against the data URL
+  #imageLink(image: ResourceDescriptor | null, size: { method: "fit" | "fill"; width: number; height: number }): string | null {
+    return image ? image.toResized(size).link : null;
   }
 }

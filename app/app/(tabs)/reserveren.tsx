@@ -1,8 +1,8 @@
-import { ScrollView, View, Text, StyleSheet, Pressable, Linking, RefreshControl } from "react-native";
+import { ScrollView, View, Text, Image, StyleSheet, Pressable, Linking, RefreshControl } from "react-native";
 import { Colors } from "@/constants/Colors";
 import { useSpinnerijData } from "@/hooks/useSpinnerijData";
 
-import { WHATSAPP_BASE } from "@/constants/api";
+import { WHATSAPP_BASE, resolveImageUrl } from "@/constants/api";
 
 export default function ReserverenScreen() {
   const { data, loading, error, refresh } = useSpinnerijData();
@@ -48,11 +48,17 @@ export default function ReserverenScreen() {
       <Text style={styles.title}>Reserveren</Text>
       <Text style={styles.subtitle}>Boek een vergaderruimte</Text>
 
-      {rooms.map((room) => (
+      {rooms.map((room) => {
+        const imageUrl = resolveImageUrl(room.imageurl);
+        return (
         <View key={room.wrdid} style={styles.card}>
-          <View style={styles.cardImagePlaceholder}>
-            <Text style={styles.cardImageText}>{room.wrdtitle}</Text>
-          </View>
+          {imageUrl
+            ? <Image source={{ uri: imageUrl }} style={styles.cardImage} resizeMode="cover" />
+            : (
+              <View style={styles.cardImagePlaceholder}>
+                <Text style={styles.cardImageText}>{room.wrdtitle}</Text>
+              </View>
+            )}
           <View style={styles.cardContent}>
             <Text style={styles.roomName}>
               {room.wrdtitle} - {room.subtitle}
@@ -72,7 +78,8 @@ export default function ReserverenScreen() {
             </Pressable>
           </View>
         </View>
-      ))}
+        );
+      })}
 
       {rooms.length === 0 && (
         <View style={styles.empty}>
@@ -116,6 +123,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 16,
     elevation: 4,
+  },
+  cardImage: {
+    width: "100%",
+    height: 220,
+    backgroundColor: Colors.skeleton,
   },
   cardImagePlaceholder: {
     width: "100%",

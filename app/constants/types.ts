@@ -5,6 +5,7 @@ export interface Room {
   capacity: number;
   description: string;
   wrdordering: number;
+  imageurl: string | null;
 }
 
 export interface Tenant {
@@ -24,6 +25,7 @@ export interface Tenant {
   twitter: string;
   pinterest: string;
   vimeo: string;
+  logourl: string | null;
 }
 
 export interface SupplyDemandItem {

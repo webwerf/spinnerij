@@ -1,6 +1,7 @@
 import { View, Text, Image, StyleSheet, Pressable, Linking } from "react-native";
 import { Colors } from "@/constants/Colors";
 import type { Tenant } from "@/constants/types";
+import { resolveImageUrl } from "@/constants/api";
 
 interface TenantCardProps {
   tenant: Tenant;
@@ -74,11 +75,14 @@ function buildContactActions(tenant: Tenant): ContactAction[] {
 export function TenantCard({ tenant }: TenantCardProps) {
   const actions = buildContactActions(tenant);
   const description = stripHtml(tenant.description);
+  const logoUrl = resolveImageUrl(tenant.logourl);
 
   return (
     <View style={styles.card}>
       <View style={styles.logoContainer}>
-        <Image source={{ uri: getAvatarUrl(tenant.wrdtitle) }} style={styles.logo} />
+        {logoUrl
+          ? <Image source={{ uri: logoUrl }} style={[styles.logo, styles.logoImage]} resizeMode="contain" />
+          : <Image source={{ uri: getAvatarUrl(tenant.wrdtitle) }} style={styles.logo} />}
       </View>
       <Text style={styles.name} numberOfLines={2}>
         {tenant.wrdtitle}
@@ -134,6 +138,10 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 12,
     backgroundColor: Colors.skeleton,
+  },
+  logoImage: {
+    width: 160,
+    backgroundColor: "transparent",
   },
   name: {
     fontSize: 16,
