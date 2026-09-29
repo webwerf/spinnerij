@@ -9,7 +9,7 @@
       <excludepath mask="app/.expo*" />
       <excludepath mask="app/dist*" />
       <excludepath mask="app/.vercel*" />
-      <excludepath mask="app/.playwright-mcp*" />
+      <excludepath mask="*.playwright-mcp*" />
     </packaging>
     <validation options="nowarnings">
       <exclude mask="web/*" permanent="true" why="Built Expo PWA (non-WebHare)" />
