@@ -27,7 +27,7 @@ show_help() {
   echo "  webhare (wh)         Web deployen naar WebHare"
   echo ""
   echo "Flags:"
-  echo "  start                --local (lokale API) | --prod (sites.webwerf.nl)"
+  echo "  start                --local (lokale API) | --prod (sites.tech42.nl)"
   echo "  webhare              --local (lokale API)"
   echo ""
   echo "Without command: interactive menu"
@@ -42,20 +42,20 @@ do_start() {
   for arg in "$@"; do
     case $arg in
       --local) API_URL="http://127.0.0.1:8001/spinnerij" ;;
-      --prod)  API_URL="https://sites.webwerf.nl/spinnerij-app" ;;
+      --prod)  API_URL="https://sites.tech42.nl/spinnerij-app" ;;
     esac
   done
 
   if [ -z "$API_URL" ]; then
     echo ""
     echo "Met welke API wil je verbinden?"
-    echo "  1) Productie — sites.webwerf.nl (default)"
+    echo "  1) Productie — sites.tech42.nl (default)"
     echo "  2) Lokaal — 127.0.0.1:8001"
     read -p "Kies [1-2]: " -n 1 -r
     echo
     case $REPLY in
       2) API_URL="http://127.0.0.1:8001/spinnerij" ;;
-      *) API_URL="https://sites.webwerf.nl/spinnerij-app" ;;
+      *) API_URL="https://sites.tech42.nl/spinnerij-app" ;;
     esac
   fi
 
