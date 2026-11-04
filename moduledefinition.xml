@@ -13,6 +13,7 @@
     </packaging>
     <validation options="nowarnings">
       <exclude mask="web/*" permanent="true" why="Built Expo PWA (non-WebHare)" />
+      <exclude mask="app/*" permanent="true" why="Expo source with its own React Native toolchain" />
     </validation>
   </meta>
 
