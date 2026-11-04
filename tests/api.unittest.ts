@@ -7,7 +7,7 @@ import * as test from "@webhare/test";
 import * as whdb from "@webhare/whdb";
 import { ResourceDescriptor } from "@webhare/services";
 import { WRDSchema } from "@webhare/wrd";
-import { spinnerijSchema } from "wh:wrd/spinnerij";
+import type { spinnerijSchema } from "wh:wrd/spinnerij";
 import { SpinnerijApi } from "@mod-spinnerij/js/api";
 
 type SpinnerijSchema = typeof spinnerijSchema;

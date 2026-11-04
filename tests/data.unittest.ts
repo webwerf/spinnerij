@@ -6,7 +6,7 @@ import { reset } from "@webhare/test-backend";
 import * as test from "@webhare/test";
 import * as whdb from "@webhare/whdb";
 import { WRDSchema } from "@webhare/wrd";
-import { spinnerijSchema } from "wh:wrd/spinnerij";
+import type { spinnerijSchema } from "wh:wrd/spinnerij";
 import { SpinnerijApi } from "@mod-spinnerij/js/api";
 import { getData } from "@mod-spinnerij/webdesigns/spinnerij/scripts/data";
 
